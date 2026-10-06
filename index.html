@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Silkworm Monitor</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#f4f7f5;
+    color:#222;
+}
+
+header{
+    background:#198754;
+    color:white;
+    padding:20px;
+    text-align:center;
+}
+
+header h1{
+    margin:0;
+    font-size:28px;
+}
+
+header p{
+    margin:7px 0 0;
+    font-size:14px;
+}
+
+.container{
+    width:95%;
+    max-width:1100px;
+    margin:25px auto;
+}
+
+.connection{
+    background:white;
+    padding:15px;
+    border-radius:8px;
+    margin-bottom:20px;
+    border:1px solid #ddd;
+}
+
+.online{
+    color:#198754;
+    font-weight:bold;
+}
+
+.delay{
+    color:#d39e00;
+    font-weight:bold;
+}
+
+.offline{
+    color:#dc3545;
+    font-weight:bold;
+}
+
+.cards{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:15px;
+}
+
+.card{
+    background:white;
+    border:1px solid #ddd;
+    border-radius:8px;
+    padding:20px;
+    text-align:center;
+}
+
+.card h3{
+    margin-top:0;
+    color:#555;
+}
+
+.value{
+    font-size:32px;
+    font-weight:bold;
+    margin:10px 0;
+}
+
+.unit{
+    color:#777;
+}
+
+.status{
+    margin-top:20px;
+    background:white;
+    border:1px solid #ddd;
+    border-radius:8px;
+    padding:20px;
+}
+
+.status-normal{
+    color:#198754;
+}
+
+.status-warning{
+    color:#d39e00;
+}
+
+.status-danger{
+    color:#dc3545;
+}
+
+.chart{
+    margin-top:20px;
+    background:white;
+    border:1px solid #ddd;
+    border-radius:8px;
+    padding:20px;
+}
+
+.chart-container{
+    height:300px;
+}
+
+.settings{
+    margin-top:20px;
+    background:white;
+    border:1px solid #ddd;
+    border-radius:8px;
+    padding:20px;
+}
+
+input[type="range"]{
+    width:100%;
+}
+
+.limit-value{
+    color:#198754;
+    font-weight:bold;
+}
+
+button{
+    margin-top:10px;
+    padding:10px 18px;
+    border:none;
+    border-radius:5px;
+    background:#198754;
+    color:white;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#146c43;
+}
+
+button:disabled{
+    background:#999;
+}
+
+.alert{
+    margin-top:20px;
+    padding:15px;
+    border-radius:7px;
+    background:#e9f7ef;
+    color:#198754;
+}
+
+.alert-danger{
+    background:#fdeaea;
+    color:#dc3545;
+}
+
+footer{
+    text-align:center;
+    padding:20px;
+    margin-top:30px;
+    color:#777;
+    font-size:13px;
+}
+
+@media(max-width:700px){
+
+    .cards{
+        grid-template-columns:1fr;
+    }
+
+    header h1{
+        font-size:23px;
+    }
+
+    .value{
+        font-size:28px;
+    }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+    <h1>🦋 Silkworm Monitor</h1>
+
+    <p>
+        IoT Based Silkworm Environmental Monitoring System
+    </p>
+
+</header>
+
+
+<div class="container">
+
+
+<!-- =====================================================
+     CONNECTION STATUS
+===================================================== -->
+
+<div class="connection">
+
+    <b>ESP32 Status:</b>
+
+    <span
+        id="cloudStatus"
+        class="offline"
+    >
+        Connecting...
+    </span>
+
+    <br>
+
+    <small id="lastUpdate">
+        Waiting for sensor data...
+    </small>
+
+    <br>
+
+    <small id="dataAge">
+        Data age: --
+    </small>
+
+</div>
+
+
+<!-- =====================================================
+     SENSOR CARDS
+===================================================== -->
+
+<div class="cards">
+
+
+    <div class="card">
+
+        <h3>🌡️ Temperature</h3>
+
+        <div class="value">
+
+            <span id="temperature">
+                --
+            </span>
+
+            <span class="unit">
+                °C
+            </span>
+
+        </div>
+
+        <small>
+            Limit:
+            <span
+                id="temperatureLimit"
+                class="limit-value"
+            >
+                30.0 °C
+            </span>
+        </small>
+
+    </div>
+
+
+    <div class="card">
+
+        <h3>💧 Humidity</h3>
+
+        <div class="value">
+
+            <span id="humidity">
+                --
+            </span>
+
+            <span class="unit">
+                %
+            </span>
+
+        </div>
+
+        <small>
+            Relative Humidity
+        </small>
+
+    </div>
+
+
+    <div class="card">
+
+        <h3>🔊 Sound</h3>
+
+        <div class="value">
+
+            <span id="sound">
+                --
+            </span>
+
+            <span class="unit">
+                %
+            </span>
+
+        </div>
+
+        <small>
+            INMP441 Microphone
+        </small>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     SYSTEM STATUS
+===================================================== -->
+
+<div class="status">
+
+    <h2>
+        System Status
+    </h2>
+
+    <h3 id="systemStatus">
+        Waiting...
+    </h3>
+
+    <p id="statusMessage">
+        Waiting for ESP32 sensor data.
+    </p>
+
+</div>
+
+
+<!-- =====================================================
+     TEMPERATURE ALERT
+===================================================== -->
+
+<div
+    id="alertBox"
+    class="alert"
+>
+
+    <b>
+        Temperature Alert
+    </b>
+
+    <p id="alertText">
+        No active temperature alert.
+    </p>
+
+</div>
+
+
+<!-- =====================================================
+     CHART
+===================================================== -->
+
+<div class="chart">
+
+    <h2>
+        📊 Sensor Data
+    </h2>
+
+    <div class="chart-container">
+
+        <canvas id="sensorChart"></canvas>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     SETTINGS
+===================================================== -->
+
+<div class="settings">
+
+    <h2>
+        ⚙️ Temperature Setting
+    </h2>
+
+    <p>
+        Set the temperature limit for the silkworm environment.
+    </p>
+
+    <label>
+
+        Temperature Limit:
+
+        <b
+            id="limitValue"
+            class="limit-value"
+        >
+            30.0 °C
+        </b>
+
+    </label>
+
+    <br>
+
+    <input
+        type="range"
+        id="temperatureSlider"
+        min="20"
+        max="40"
+        step="0.5"
+        value="30"
+    >
+
+    <br>
+
+    <button
+        id="sendButton"
+    >
+        Send Limit to ESP32
+    </button>
+
+    <p id="sendStatus">
+        Not sent yet.
+    </p>
+
+</div>
+
+
+</div>
+
+
+<footer>
+
+    Silkworm Monitor © 2026<br>
+    ESP32 + DHT22 + INMP441 + ThingSpeak
+
+</footer>
+
+
+<script>
+
+/* =====================================================
+   THINGSPEAK SETTINGS
+===================================================== */
+
+const THINGSPEAK = {
+
+    channel: "3516264",
+
+    readKey: "JK0G2HUDCG5Z97BT",
+
+    writeKey: "L0QWLD6TQF6RN4PE"
+
+};
+
+
+/* =====================================================
+   LIVE STATUS SETTINGS
+===================================================== */
+
+/*
+
+DATA AGE:
+
+0 - 15 seconds
+        = LIVE
+
+16 - 30 seconds
+        = DATA DELAY
+
+> 30 seconds
+        = ESP32 OFFLINE
+
+*/
+
+const LIVE_LIMIT = 15;
+
+const DELAY_LIMIT = 30;
+
+
+/* =====================================================
+   VARIABLES
+===================================================== */
+
+let temperature = null;
+let humidity = null;
+let sound = null;
+let alertStatus = null;
+
+let temperatureLimit = 30;
+
+
+/* =====================================================
+   GET ELEMENT
+===================================================== */
+
+function get(id){
+
+    return document.getElementById(id);
+
+}
+
+
+/* =====================================================
+   CHART
+===================================================== */
+
+const chart = new Chart(
+
+    get("sensorChart"),
+
+    {
+
+        type:"line",
+
+        data:{
+
+            labels:[],
+
+            datasets:[
+
+                {
+
+                    label:"Temperature °C",
+
+                    data:[],
+
+                    borderWidth:2,
+
+                    tension:0.3
+
+                },
+
+                {
+
+                    label:"Humidity %",
+
+                    data:[],
+
+                    borderWidth:2,
+
+                    tension:0.3
+
+                },
+
+                {
+
+                    label:"Sound %",
+
+                    data:[],
+
+                    borderWidth:2,
+
+                    tension:0.3
+
+                }
+
+            ]
+
+        },
+
+        options:{
+
+            responsive:true,
+
+            maintainAspectRatio:false,
+
+            animation:false,
+
+            scales:{
+
+                y:{
+
+                    beginAtZero:false
+
+                }
+
+            }
+
+        }
+
+    }
+
+);
+
+
+/* =====================================================
+   THINGSPEAK URL
+===================================================== */
+
+function getFeedURL(){
+
+    return (
+
+        "https://api.thingspeak.com/channels/" +
+
+        THINGSPEAK.channel +
+
+        "/feeds.json?results=20&api_key=" +
+
+        THINGSPEAK.readKey
+
+    );
+
+}
+
+
+/* =====================================================
+   CHECK ESP32 LIVE STATUS
+===================================================== */
+
+function checkLiveStatus(createdAt){
+
+    if(!createdAt){
+
+        setOffline(
+            "No timestamp received from ThingSpeak."
+        );
+
+        return;
+
+    }
+
+
+    const timestamp =
+        new Date(createdAt).getTime();
+
+    const now =
+        Date.now();
+
+
+    let ageSeconds =
+        (now - timestamp) / 1000;
+
+
+    /* Protect against small clock differences */
+
+    if(ageSeconds < 0){
+
+        ageSeconds = 0;
+
+    }
+
+
+    /* DISPLAY DATA AGE */
+
+    if(ageSeconds < 60){
+
+        get("dataAge").textContent =
+
+            "Data age: " +
+
+            ageSeconds.toFixed(0) +
+
+            " seconds ago";
+
+    }
+
+    else{
+
+        get("dataAge").textContent =
+
+            "Data age: " +
+
+            (ageSeconds / 60).toFixed(1) +
+
+            " minutes ago";
+
+    }
+
+
+    /* =================================================
+       LIVE
+    ================================================= */
+
+    if(ageSeconds <= LIVE_LIMIT){
+
+        get("cloudStatus").textContent =
+            "🟢 LIVE";
+
+        get("cloudStatus").className =
+            "online";
+
+        return;
+
+    }
+
+
+    /* =================================================
+       DATA DELAY
+    ================================================= */
+
+    if(ageSeconds <= DELAY_LIMIT){
+
+        get("cloudStatus").textContent =
+            "🟡 DATA DELAY";
+
+        get("cloudStatus").className =
+            "delay";
+
+        return;
+
+    }
+
+
+    /* =================================================
+       OFFLINE
+    ================================================= */
+
+    setOffline(
+        "No recent data from ESP32."
+    );
+
+}
+
+
+/* =====================================================
+   SET OFFLINE
+===================================================== */
+
+function setOffline(reason){
+
+    get("cloudStatus").textContent =
+        "🔴 ESP32 OFFLINE";
+
+    get("cloudStatus").className =
+        "offline";
+
+    get("dataAge").textContent =
+        reason;
+
+}
+
+
+/* =====================================================
+   FETCH DATA
+===================================================== */
+
+async function getData(){
+
+    try{
+
+        const response = await fetch(
+
+            getFeedURL(),
+
+            {
+                cache:"no-store"
+            }
+
+        );
+
+
+        if(!response.ok){
+
+            throw new Error(
+                "ThingSpeak error"
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        if(
+            !data.feeds ||
+            data.feeds.length === 0
+        ){
+
+            setOffline(
+                "No sensor data available."
+            );
+
+            return;
+
+        }
+
+
+        /* =================================================
+           UPDATE CHART
+        ================================================= */
+
+        updateChart(
+            data.feeds
+        );
+
+
+        /* =================================================
+           FIND LATEST FEED
+        ================================================= */
+
+        let latest = null;
+
+
+        for(
+            let i = data.feeds.length - 1;
+            i >= 0;
+            i--
+        ){
+
+            const feed =
+                data.feeds[i];
+
+
+            if(
+
+                feed.created_at &&
+
+                (
+                    feed.field1 !== null ||
+                    feed.field2 !== null ||
+                    feed.field3 !== null ||
+                    feed.field4 !== null
+                )
+
+            ){
+
+                latest = feed;
+
+                break;
+
+            }
+
+        }
+
+
+        if(!latest){
+
+            setOffline(
+                "No valid sensor feed found."
+            );
+
+            return;
+
+        }
+
+
+        /* =================================================
+           CHECK TIMESTAMP
+        ================================================= */
+
+        checkLiveStatus(
+            latest.created_at
+        );
+
+
+        /* =================================================
+           UPDATE SENSOR DATA
+        ================================================= */
+
+        updateSensors(
+            latest
+        );
+
+    }
+
+    catch(error){
+
+        console.log(
+            "ThingSpeak Error:",
+            error
+        );
+
+
+        setOffline(
+            "Unable to reach ThingSpeak."
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   UPDATE SENSOR VALUES
+===================================================== */
+
+function updateSensors(feed){
+
+    /* TEMPERATURE */
+
+    if(
+        feed.field1 !== null &&
+        feed.field1 !== ""
+    ){
+
+        const value =
+            Number(feed.field1);
+
+        if(Number.isFinite(value)){
+
+            temperature = value;
+
+        }
+
+    }
+
+
+    /* HUMIDITY */
+
+    if(
+        feed.field2 !== null &&
+        feed.field2 !== ""
+    ){
+
+        const value =
+            Number(feed.field2);
+
+        if(Number.isFinite(value)){
+
+            humidity = value;
+
+        }
+
+    }
+
+
+    /* SOUND */
+
+    if(
+        feed.field3 !== null &&
+        feed.field3 !== ""
+    ){
+
+        const value =
+            Number(feed.field3);
+
+        if(Number.isFinite(value)){
+
+            sound = value;
+
+        }
+
+    }
+
+
+    /* ALERT */
+
+    if(
+        feed.field4 !== null &&
+        feed.field4 !== ""
+    ){
+
+        const value =
+            Number(feed.field4);
+
+        if(Number.isFinite(value)){
+
+            alertStatus = value;
+
+        }
+
+    }
+
+
+    /* DISPLAY TEMPERATURE */
+
+    if(temperature !== null){
+
+        get("temperature").textContent =
+            temperature.toFixed(1);
+
+    }
+
+
+    /* DISPLAY HUMIDITY */
+
+    if(humidity !== null){
+
+        get("humidity").textContent =
+            humidity.toFixed(1);
+
+    }
+
+
+    /* DISPLAY SOUND */
+
+    if(sound !== null){
+
+        get("sound").textContent =
+            sound.toFixed(1);
+
+    }
+
+
+    /* LAST UPDATE */
+
+    if(feed.created_at){
+
+        get("lastUpdate").textContent =
+
+            "Last ThingSpeak update: " +
+
+            new Date(
+                feed.created_at
+            ).toLocaleString();
+
+    }
+
+
+    updateStatus();
+
+}
+
+
+/* =====================================================
+   SYSTEM STATUS
+===================================================== */
+
+function updateStatus(){
+
+    if(temperature === null){
+
+        return;
+
+    }
+
+
+    let status =
+        "NORMAL";
+
+    let message =
+        "Environment is normal.";
+
+    let statusClass =
+        "status-normal";
+
+
+    /* TEMPERATURE HIGH */
+
+    if(
+        temperature >= temperatureLimit
+    ){
+
+        status =
+            "HIGH TEMPERATURE";
+
+        message =
+            "Temperature is above the safe limit.";
+
+        statusClass =
+            "status-danger";
+
+
+        get("alertBox").className =
+            "alert alert-danger";
+
+
+        get("alertText").textContent =
+
+            "Temperature " +
+
+            temperature.toFixed(1) +
+
+            " °C is above the limit of " +
+
+            temperatureLimit.toFixed(1) +
+
+            " °C.";
+
+    }
+
+
+    /* ESP32 ALERT */
+
+    else if(
+        alertStatus === 1
+    ){
+
+        status =
+            "ALERT";
+
+        message =
+            "ESP32 has detected an alert.";
+
+        statusClass =
+            "status-danger";
+
+
+        get("alertBox").className =
+            "alert alert-danger";
+
+
+        get("alertText").textContent =
+            "ESP32 reported an active alert.";
+
+    }
+
+
+    /* HIGH SOUND */
+
+    else if(
+        sound !== null &&
+        sound >= 70
+    ){
+
+        status =
+            "HIGH SOUND";
+
+        message =
+            "High sound activity detected.";
+
+        statusClass =
+            "status-warning";
+
+
+        get("alertBox").className =
+            "alert";
+
+
+        get("alertText").textContent =
+            "High sound activity detected.";
+
+    }
+
+
+    else{
+
+        get("alertBox").className =
+            "alert";
+
+        get("alertText").textContent =
+            "No active temperature alert.";
+
+    }
+
+
+    get("systemStatus").textContent =
+        status;
+
+    get("systemStatus").className =
+        statusClass;
+
+    get("statusMessage").textContent =
+        message;
+
+}
+
+
+/* =====================================================
+   UPDATE CHART
+===================================================== */
+
+function updateChart(feeds){
+
+    const labels = [];
+
+    const temperatures = [];
+
+    const humidities = [];
+
+    const sounds = [];
+
+
+    feeds.forEach(feed => {
+
+        labels.push(
+
+            new Date(
+                feed.created_at
+            ).toLocaleTimeString(
+                [],
+                {
+                    hour:"2-digit",
+                    minute:"2-digit"
+                }
+            )
+
+        );
+
+
+        temperatures.push(
+
+            feed.field1 !== null &&
+            feed.field1 !== ""
+
+            ?
+
+            Number(feed.field1)
+
+            :
+
+            null
+
+        );
+
+
+        humidities.push(
+
+            feed.field2 !== null &&
+            feed.field2 !== ""
+
+            ?
+
+            Number(feed.field2)
+
+            :
+
+            null
+
+        );
+
+
+        sounds.push(
+
+            feed.field3 !== null &&
+            feed.field3 !== ""
+
+            ?
+
+            Number(feed.field3)
+
+            :
+
+            null
+
+        );
+
+    });
+
+
+    chart.data.labels =
+        labels;
+
+
+    chart.data.datasets[0].data =
+        temperatures;
+
+
+    chart.data.datasets[1].data =
+        humidities;
+
+
+    chart.data.datasets[2].data =
+        sounds;
+
+
+    chart.update("none");
+
+}
+
+
+/* =====================================================
+   TEMPERATURE SLIDER
+===================================================== */
+
+get("temperatureSlider")
+.addEventListener(
+
+    "input",
+
+    function(){
+
+        temperatureLimit =
+            Number(this.value);
+
+
+        get("limitValue").textContent =
+
+            temperatureLimit.toFixed(1) +
+            " °C";
+
+
+        get("temperatureLimit").textContent =
+
+            temperatureLimit.toFixed(1) +
+            " °C";
+
+
+        updateStatus();
+
+    }
+
+);
+
+
+/* =====================================================
+   SEND TEMPERATURE LIMIT
+===================================================== */
+
+get("sendButton")
+.addEventListener(
+
+    "click",
+
+    sendTemperatureLimit
+
+);
+
+
+async function sendTemperatureLimit(){
+
+    const limit =
+        Number(
+            get("temperatureSlider").value
+        );
+
+
+    const url =
+
+        "https://api.thingspeak.com/update?" +
+
+        "api_key=" +
+
+        encodeURIComponent(
+            THINGSPEAK.writeKey
+        ) +
+
+        "&field5=" +
+
+        encodeURIComponent(
+            limit
+        );
+
+
+    get("sendButton").disabled =
+        true;
+
+
+    get("sendStatus").textContent =
+        "Sending...";
+
+
+    try{
+
+        const response =
+            await fetch(url);
+
+
+        const result =
+            await response.text();
+
+
+        if(result.trim() === "0"){
+
+            get("sendStatus").textContent =
+
+                "ThingSpeak rejected the update. " +
+
+                "Please wait 15 seconds and try again.";
+
+        }
+
+        else{
+
+            temperatureLimit =
+                limit;
+
+
+            get("sendStatus").textContent =
+
+                "Limit sent successfully. Entry ID: " +
+                result;
+
+
+            get("temperatureLimit").textContent =
+
+                limit.toFixed(1) +
+                " °C";
+
+
+            updateStatus();
+
+        }
+
+    }
+
+    catch(error){
+
+        console.log(error);
+
+        get("sendStatus").textContent =
+            "Network error.";
+
+    }
+
+
+    setTimeout(
+
+        () => {
+
+            get("sendButton").disabled =
+                false;
+
+        },
+
+        16000
+
+    );
+
+}
+
+
+/* =====================================================
+   READ FIELD 5
+===================================================== */
+
+async function getTemperatureLimit(){
+
+    try{
+
+        const url =
+
+            "https://api.thingspeak.com/channels/" +
+
+            THINGSPEAK.channel +
+
+            "/fields/5/last.txt?api_key=" +
+
+            THINGSPEAK.readKey;
+
+
+        const response =
+            await fetch(url);
+
+
+        const text =
+            await response.text();
+
+
+        const value =
+            Number(text.trim());
+
+
+        if(
+
+            Number.isFinite(value) &&
+
+            value >= 20 &&
+
+            value <= 40
+
+        ){
+
+            temperatureLimit =
+                value;
+
+
+            get("temperatureSlider").value =
+                value;
+
+
+            get("limitValue").textContent =
+
+                value.toFixed(1) +
+                " °C";
+
+
+            get("temperatureLimit").textContent =
+
+                value.toFixed(1) +
+                " °C";
+
+        }
+
+    }
+
+    catch(error){
+
+        console.log(
+            "Temperature limit error:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   START
+===================================================== */
+
+getTemperatureLimit();
+
+getData();
+
+
+/* =====================================================
+   AUTO REFRESH
+===================================================== */
+
+setInterval(
+
+    getData,
+
+    5000
+
+);
+
+
+setInterval(
+
+    getTemperatureLimit,
+
+    10000
+
+);
+
+</script>
+
+</body>
+
+</html>
